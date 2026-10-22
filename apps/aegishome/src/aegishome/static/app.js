@@ -504,14 +504,7 @@ async function sendUtteranceFlow(utterance) {
 }
 
 function handleSamplePrompt() {
-  const samples = [
-    "Alexa, how's Dad's house?",
-    "Set the thermostat to 72°F.",
-    "Read me the note on the porch.",
-    "Alexa, unlock the front door",
-  ];
-  const choice = samples[Math.floor(Math.random() * samples.length)];
-  utteranceInput.value = choice;
+  utteranceInput.value = "Alexa, what is the status of the house?";
   utteranceInput.focus();
 }
 

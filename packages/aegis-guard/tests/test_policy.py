@@ -115,3 +115,31 @@ def test_missing_policy_file_fails_closed(tmp_path: pytest.TempPathFactory) -> N
     policy = RiskPolicy.from_yaml_file(non_existent)
     assert policy.get_risk("thermostat", "set") == RiskLevel.HIGH
     assert policy.get_risk("anything", "anything") == RiskLevel.HIGH
+
+
+def test_temperature_safety_cap() -> None:
+    """Verify temperature safety caps dynamically elevate extreme climate changes to HIGH risk."""
+    policy = RiskPolicy.default()
+
+    # Normal human comfort range [65.0°F, 80.0°F] -> LOW risk
+    assert policy.get_risk("thermostat", "set_temperature", {"temperature": 70.0}) == RiskLevel.LOW
+    assert policy.get_risk("thermostat", "set_temperature", {"temperature": 72.0}) == RiskLevel.LOW
+    assert policy.get_risk("thermostat", "set_temperature", {"temperature": 65.0}) == RiskLevel.LOW
+    assert policy.get_risk("thermostat", "set_temperature", {"temperature": 80.0}) == RiskLevel.LOW
+
+    # Extreme low temperatures (< 65.0°F) -> Dynamically elevated to HIGH risk
+    assert policy.get_risk("thermostat", "set_temperature", {"temperature": 64.9}) == RiskLevel.HIGH
+    assert policy.get_risk("thermostat", "set_temperature", {"temperature": 55.0}) == RiskLevel.HIGH
+    assert policy.get_risk("thermostat", "set_temperature", {"temperature": 40.0}) == RiskLevel.HIGH
+
+    # Extreme high temperatures (> 80.0°F) -> Dynamically elevated to HIGH risk
+    assert policy.get_risk("thermostat", "set_temperature", {"temperature": 80.1}) == RiskLevel.HIGH
+    assert policy.get_risk("thermostat", "set_temperature", {"temperature": 85.0}) == RiskLevel.HIGH
+    assert policy.get_risk("thermostat", "set_temperature", {"temperature": 99.0}) == RiskLevel.HIGH
+
+    # Alternate parameter keys (target_temperature, target_temp_f, temp)
+    assert policy.get_risk("thermostat", "set_temperature", {"target_temperature": 88.0}) == RiskLevel.HIGH
+    assert policy.get_risk("thermostat", "set_temperature", {"target_temp_f": 60.0}) == RiskLevel.HIGH
+    assert policy.get_risk("thermostat", "set_temperature", {"temp": 95.0}) == RiskLevel.HIGH
+    assert policy.get_risk("thermostat", "set_temperature", {"temperature": "invalid"}) == RiskLevel.HIGH
+

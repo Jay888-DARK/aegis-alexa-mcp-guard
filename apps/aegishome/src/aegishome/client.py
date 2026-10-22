@@ -378,18 +378,26 @@ class IntentDriver:
             active_prop_id = p_data.get("proposal_id")
             risk_tier = p_data.get("risk_tier", "LOW")
 
-            # Routine thermostat adjustments are LOW risk -> Auto-confirm
-            conf_res = self.executor.call_tool(
-                "confirm_action",
-                {
-                    "proposal_id": active_prop_id,
-                    "approved": True,
-                    "reason": f"Routine caregiver thermostat setpoint {target_temp}°F",
-                },
-            )
-            tool_calls.append({"name": "confirm_action", "arguments": {"proposal_id": active_prop_id, "approved": True}, "result": conf_res})
+            # If outside standard comfort range, it is HIGH risk and requires owner approval
+            if risk_tier in ("HIGH", "MEDIUM"):
+                reply = (
+                    f"Thermostat adjustment to {target_temp}°F is outside the standard comfort range (65°F - 80°F) "
+                    f"and is classified as {risk_tier} risk (Proposal: {active_prop_id}). "
+                    f"Out-of-band owner approval is required on your phone."
+                )
+            else:
+                # Routine thermostat adjustments are LOW risk -> Auto-confirm
+                conf_res = self.executor.call_tool(
+                    "confirm_action",
+                    {
+                        "proposal_id": active_prop_id,
+                        "approved": True,
+                        "reason": f"Routine caregiver thermostat setpoint {target_temp}°F",
+                    },
+                )
+                tool_calls.append({"name": "confirm_action", "arguments": {"proposal_id": active_prop_id, "approved": True}, "result": conf_res})
 
-            reply = f"I've set the thermostat to {target_temp}°F (LOW risk, verified & confirmed). Eleanor's room climate updated."
+                reply = f"I've set the thermostat to {target_temp}°F (LOW risk, verified & confirmed). Eleanor's room climate updated."
 
         # -------------------------------------------------------------
         # Scenario 2 / Door Unlock Intent

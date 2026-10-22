@@ -185,7 +185,7 @@ class ConfirmationGateway:
         ttl = ttl_seconds if ttl_seconds is not None else self.default_ttl_seconds
         expires_at = now + ttl
 
-        base_risk = self.policy.get_risk(device, action)
+        base_risk = self.policy.get_risk(device, action, params=params)
         effective_risk, is_tainted, escalation_reason = self.taint_tracker.evaluate_risk(
             base_risk=base_risk,
             session_id=session_id,

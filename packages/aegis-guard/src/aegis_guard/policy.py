@@ -130,12 +130,18 @@ class RiskPolicy:
             return cls.from_yaml_file(cls.DEFAULT_POLICY_PATH)
         return cls(rules={}, default_risk=RiskLevel.HIGH)
 
-    def get_risk(self, device: str, action: str) -> RiskLevel:
+    def get_risk(
+        self,
+        device: str,
+        action: str,
+        params: dict[str, Any] | None = None,
+    ) -> RiskLevel:
         """Get the risk level for a device and action pair.
 
         Args:
             device: Name or identifier of target device.
             action: Action being attempted.
+            params: Optional dictionary of action parameters evaluated for dynamic safety caps.
 
         Returns:
             RiskLevel (LOW, MEDIUM, HIGH). Unrecognized actions return HIGH.
@@ -143,16 +149,38 @@ class RiskPolicy:
         if not device or not action:
             return RiskLevel.HIGH
 
+        # Dynamic climate safety cap: Extreme temperatures outside [65.0°F, 80.0°F]
+        # are elevated from LOW to HIGH risk, requiring two-factor owner approval on the phone UI.
+        norm_action = str(action).lower().strip()
+        norm_device = str(device).lower().strip()
+        if (norm_action in ("set_temperature", "set_temp") or "thermostat" in norm_device) and params:
+            temp_val = (
+                params.get("temperature")
+                if "temperature" in params
+                else params.get("target_temperature")
+                if "target_temperature" in params
+                else params.get("target_temp_f")
+                if "target_temp_f" in params
+                else params.get("temp")
+            )
+            if temp_val is not None:
+                try:
+                    t_float = float(temp_val)
+                    if t_float < 65.0 or t_float > 80.0:
+                        return RiskLevel.HIGH
+                except (ValueError, TypeError):
+                    return RiskLevel.HIGH
+
         key = _normalize_key(device, action)
         return self._rules.get(key, self._default_risk)
 
-    def is_high_risk(self, device: str, action: str) -> bool:
+    def is_high_risk(self, device: str, action: str, params: dict[str, Any] | None = None) -> bool:
         """Return True if the action is classified as HIGH risk."""
-        return self.get_risk(device, action) == RiskLevel.HIGH
+        return self.get_risk(device, action, params=params) == RiskLevel.HIGH
 
-    def requires_confirmation(self, device: str, action: str) -> bool:
+    def requires_confirmation(self, device: str, action: str, params: dict[str, Any] | None = None) -> bool:
         """Return True if the action requires caregiver confirmation (MEDIUM or HIGH)."""
-        risk = self.get_risk(device, action)
+        risk = self.get_risk(device, action, params=params)
         return risk in (RiskLevel.MEDIUM, RiskLevel.HIGH)
 
     @property
