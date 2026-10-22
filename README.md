@@ -23,10 +23,13 @@ While this unlocks powerful caregiver and assistive-living capabilities, it intr
 **Aegis** solves this problem by acting as a deterministic safety gateway between Alexa+ reasoning agents and real physical devices.
 
 ---
+# Aegis: Safety Gateway for Alexa+ MCP Servers
 
+**Watch the Demo Video:** [Aegis Guard Hackathon Demo](https://youtu.be/IPYR7dVtGR8)
 ## Architecture Diagram
 
 ```mermaid
+
 flowchart TD
     subgraph InputLayer ["Voice & External Ingestion"]
         User(["Caregiver / Voice Input"]) -->|"Utterance (/api/say)"| Client["Aegis MCP Client Driver"]
