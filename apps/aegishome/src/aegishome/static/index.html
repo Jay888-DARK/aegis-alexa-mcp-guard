@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aegis · Alexa+ Caregiver Console</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Header Bar -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="caregiver-profile">
+        <div class="avatar-meera" aria-label="Caregiver Meera">M</div>
+        <div class="header-titles">
+          <h1 class="header-title">Alexa+ · Dad's House</h1>
+          <span class="header-subtitle">Caregiver: Meera &bull; Protected by AEGIS Guard</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Compact Live Device Strip -->
+    <div class="device-strip" id="device-strip" aria-label="Live Home Device Telemetry">
+      <div class="strip-item" id="strip-door" title="Front door lock state">
+        <span class="strip-icon" id="strip-door-icon">🔒</span>
+        <span class="strip-label">Door:</span>
+        <strong class="strip-val text-secure" id="strip-door-val">Locked</strong>
+      </div>
+      <div class="strip-divider"></div>
+      <div class="strip-item" id="strip-garage" title="Garage perimeter access">
+        <span class="strip-icon">🚪</span>
+        <span class="strip-label">Garage:</span>
+        <strong class="strip-val" id="strip-garage-val">Closed</strong>
+      </div>
+      <div class="strip-divider"></div>
+      <div class="strip-item" id="strip-climate" title="Living area climate setpoint">
+        <span class="strip-icon">🌡️</span>
+        <span class="strip-label">Temp:</span>
+        <strong class="strip-val" id="strip-temp-val">71.0°F</strong>
+      </div>
+      <div class="strip-divider"></div>
+      <div class="strip-item" id="strip-package" title="Front porch package sensor">
+        <span class="strip-icon">📦</span>
+        <span class="strip-label">Porch:</span>
+        <strong class="strip-val" id="strip-pkg-val">$120.00</strong>
+      </div>
+    </div>
+
+    <!-- Header Actions -->
+    <div class="header-actions">
+      <button class="btn btn-primary btn-story" id="btn-run-story" title="Run end-to-end caregiver story">
+        <span class="story-icon">▶</span>
+        <span>Run Caregiver Story</span>
+      </button>
+
+      <button class="btn btn-secondary btn-reset" id="btn-reset-demo" title="Reset all simulated home devices and gateway state">
+        <span class="reset-icon">↺</span>
+        <span>Reset demo</span>
+      </button>
+
+      <button class="btn btn-outline btn-hood" id="btn-toggle-drawer" aria-expanded="false" aria-controls="side-drawer" title="Toggle wire and audit inspection drawer">
+        <span class="hood-icon">⚙</span>
+        <span>Under the hood</span>
+        <span class="badge-dot" id="drawer-activity-badge"></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main 3-Region Desktop Layout -->
+  <main class="console-layout">
+    
+    <!-- REGION 1: Main Alexa+ Conversation (about 60% width) -->
+    <section class="panel-conversation" id="panel-voice-chat" aria-label="Alexa+ Conversation">
+      <div class="conversation-header">
+        <div class="conv-title-group">
+          <div class="alexa-orb-soft" aria-hidden="true"></div>
+          <div>
+            <h2 class="conv-heading">Alexa+ Caregiver Voice &amp; Chat</h2>
+            <p class="conv-subheading">Deterministic safety gateway gating all physical smart-home actuation</p>
+          </div>
+        </div>
+        <div class="conv-badges">
+          <span class="engine-chip chip-rule" id="engine-chip">RULE ENGINE</span>
+          <span class="session-taint-chip" id="session-taint-chip" style="display: none;">
+            ⚠️ Session Tainted
+          </span>
+        </div>
+      </div>
+
+      <!-- Live Chat Messages Stream -->
+      <div class="chat-viewport" id="chat-feed" role="region" aria-live="polite" aria-label="Chat messages history">
+        <!-- Initial Welcome Message -->
+        <div class="chat-message msg-alexa">
+          <div class="msg-bubble-alexa">
+            <div class="msg-sender">Alexa+</div>
+            <div class="msg-content">
+              Hi Meera. I'm connected to your father's home. You can ask for status, adjust climate, or click <strong>Run Caregiver Story</strong> to play the assisted caregiver check-in.
+            </div>
+            <div class="msg-meta">Ready</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Typing Indicator -->
+      <div class="typing-indicator-row" id="typing-indicator" style="display: none;" aria-hidden="true">
+        <div class="typing-bubble">
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+        </div>
+        <span class="typing-text">Alexa+ is processing...</span>
+      </div>
+
+      <!-- Utterance Input Bar -->
+      <form class="chat-input-bar" id="chat-form">
+        <button type="button" class="btn-input-mic" id="btn-mic" title="Sample prompts for Meera">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+        </button>
+        <label for="utterance-input" class="sr-only">Type a message to Alexa+</label>
+        <input 
+          type="text" 
+          id="utterance-input" 
+          class="utterance-input" 
+          placeholder="Ask Alexa+ (e.g. 'Alexa, how's Dad's house?' or 'Set thermostat to 72°F')..."
+          autocomplete="off"
+        />
+        <button type="submit" class="btn btn-primary btn-send" id="btn-send">
+          <span>Send</span>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </form>
+    </section>
+
+    <!-- REGION 2: Phone-Style "Owner Approval" Card (Right of Conversation) -->
+    <section class="panel-phone-region" id="panel-devices-proposals" aria-label="Owner Approval Phone Channel">
+      <div class="phone-frame-wrapper">
+        <div class="phone-label-bar">
+          <span class="phone-label-title">MEERA'S PHONE</span>
+          <span class="phone-channel-badge">Out-of-Band Auth</span>
+        </div>
+
+        <!-- Phone Mockup Device -->
+        <div class="phone-device" id="phone-device">
+          <!-- Physical Phone Bezel & Notch -->
+          <div class="phone-notch">
+            <span class="speaker-slit"></span>
+            <span class="camera-lens"></span>
+          </div>
+
+          <!-- Phone Screen Content -->
+          <div class="phone-screen" id="phone-screen">
+            <!-- Phone Status Bar -->
+            <div class="phone-status-bar">
+              <span class="phone-time" id="phone-clock">10:42</span>
+              <div class="phone-icons">
+                <span class="signal-icon">●●●</span>
+                <span class="wifi-icon">📶</span>
+                <span class="battery-icon">98%</span>
+              </div>
+            </div>
+
+            <!-- Phone Inner Viewport -->
+            <div class="phone-content-area">
+              <div class="phone-app-header">
+                <div class="phone-app-icon">🛡️</div>
+                <div class="phone-app-titles">
+                  <strong>Aegis Guard</strong>
+                  <small>Homeowner Approval Channel</small>
+                </div>
+              </div>
+
+              <!-- State A: Empty State ("No approvals waiting") -->
+              <div class="phone-empty-state" id="phone-empty-state">
+                <div class="empty-shield-icon">✓</div>
+                <h3>No approvals waiting</h3>
+                <p>High-consequence actions like unlocking doors or disarming perimeter barriers require out-of-band authorization on this screen.</p>
+                <div class="phone-lock-status">
+                  <span>Perimeter Security:</span>
+                  <strong class="text-secure">ALL SECURED</strong>
+                </div>
+              </div>
+
+              <!-- State B: Pending Action Approval Card (Slides in on HIGH-risk proposal) -->
+              <div class="phone-approval-card" id="phone-approval-card" style="display: none;">
+                <div class="card-badge-row">
+                  <span class="badge-risk-high" id="phone-risk-badge">HIGH RISK</span>
+                  <span class="phone-ttl-badge" id="phone-ttl-badge">60s</span>
+                </div>
+
+                <div class="phone-action-summary">
+                  <h4 id="phone-action-title">Unlock front door</h4>
+                  <p id="phone-action-details">Target: Main entrance &bull; Auto-relock: 60s</p>
+                </div>
+
+                <!-- Tainted Warning Banner (Shown when proposal was triggered by visitor note) -->
+                <div class="phone-taint-warning" id="phone-taint-warning" style="display: none;">
+                  <span class="taint-icon">⚠️</span>
+                  <div>
+                    <strong>Tainted Request</strong>
+                    <p>Triggered by an untrusted visitor note on porch.</p>
+                  </div>
+                </div>
+
+                <div class="phone-proposal-meta">
+                  <div class="meta-item">
+                    <span>Proposal:</span>
+                    <code id="phone-prop-id">-</code>
+                  </div>
+                  <div class="meta-item">
+                    <span>Voice Code:</span>
+                    <strong id="phone-voice-code">None</strong>
+                  </div>
+                </div>
+
+                <!-- Action Buttons: Approve and Deny -->
+                <div class="phone-actions-grid">
+                  <button class="btn btn-phone-deny" id="btn-phone-deny" title="Deny this perimeter request">
+                    <span>Deny</span>
+                  </button>
+                  <button class="btn btn-phone-approve" id="btn-phone-approve" title="Approve this perimeter request">
+                    <span>Approve</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- REGION 3: Collapsible Side Drawer ("Under the Hood") -->
+  <aside class="side-drawer" id="side-drawer" aria-label="Under the Hood Diagnostic Drawer" aria-hidden="true">
+    <div class="drawer-header">
+      <div class="drawer-title-group">
+        <h2 class="drawer-title">Under the Hood</h2>
+        <span class="chain-badge-ok" id="chain-status-badge" title="SHA-256 Hash Chain Verified">
+          <span class="badge-dot-green"></span>
+          <span>Chain OK</span>
+        </span>
+      </div>
+      <button class="btn-drawer-close" id="btn-close-drawer" aria-label="Close drawer">&times;</button>
+    </div>
+
+    <!-- Drawer Tabs Nav -->
+    <div class="drawer-tabs-nav" role="tablist">
+      <button class="drawer-tab-btn active" id="tab-btn-wire" role="tab" aria-selected="true" data-tab="wire">
+        <span>Wire log</span>
+        <span class="tab-count-pill" id="wire-count-badge">0</span>
+      </button>
+      <button class="drawer-tab-btn" id="tab-btn-audit" role="tab" aria-selected="false" data-tab="audit">
+        <span>Audit log</span>
+        <span class="tab-count-pill" id="audit-count-badge">0</span>
+      </button>
+    </div>
+
+    <!-- Drawer Content Views -->
+    <div class="drawer-content-area" id="panel-wire-audit">
+      <!-- Wire Log Tab (Live JSON-RPC from /mcp, newest at bottom) -->
+      <div class="drawer-tab-panel active" id="tab-panel-wire" role="tabpanel">
+        <div class="panel-status-subbar">
+          <span class="subbar-text">Live JSON-RPC frames over <code>POST /mcp</code></span>
+          <span class="subbar-indicator">● LIVE STREAM</span>
+        </div>
+        <div class="code-stream-list" id="wire-log-list" tabindex="0">
+          <div class="empty-code-notice">Waiting for MCP client JSON-RPC frames...</div>
+        </div>
+      </div>
+
+      <!-- Audit Log Tab (Allowed/Blocked + Reasons) -->
+      <div class="drawer-tab-panel" id="tab-panel-audit" role="tabpanel" style="display: none;">
+        <div class="panel-status-subbar">
+          <span class="subbar-text">Forensic Hash-Chained Audit Ledger (SQLite + JSONL)</span>
+          <span class="subbar-indicator">APPEND-ONLY</span>
+        </div>
+        <div class="audit-stream-list" id="audit-log-list" tabindex="0">
+          <div class="empty-code-notice">No audit log records yet...</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Drawer Overlay Backdrop -->
+  <div class="drawer-overlay" id="drawer-overlay" aria-hidden="true"></div>
+
+  <!-- Screen Reader Live Announcements -->
+  <div class="sr-only" id="sr-announcements" aria-live="assertive"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

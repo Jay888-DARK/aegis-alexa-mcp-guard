@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aegishome"
+version = "0.1.0"
+description = "Aegis Smart-Home Caregiver MCP Server"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "Aegis Team" }
+]
+dependencies = [
+    "aegis-guard",
+    "mcp==2.3.0",
+    "starlette==1.9.0",
+    "uvicorn==0.54.0",
+    "httpx==0.28.1",
+    "pydantic==2.14.1",
+    "python-dotenv==1.2.4",
+    "boto3==1.43.115",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+]
+
+[project.scripts]
+aegishome = "aegishome.main:run_server"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/aegishome"]

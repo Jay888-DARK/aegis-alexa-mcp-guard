@@ -1,0 +1,87 @@
+# ==============================================================================
+# Aegis Guard Risk Policy Configuration
+# Maps (device, action) tuples to Risk Levels: LOW, MEDIUM, HIGH
+# Unmapped device/action pairs MUST default to HIGH (Fail Closed)
+# ==============================================================================
+
+version: "1.0"
+default_risk: "HIGH"
+
+rules:
+  # --- Thermostat (Low Risk) ---
+  - device: "thermostat"
+    action: "set"
+    risk: "LOW"
+    description: "Adjust thermostat temperature or setpoint"
+  - device: "thermostat"
+    action: "set_temperature"
+    risk: "LOW"
+    description: "Set thermostat target temperature"
+  - device: "thermostat"
+    action: "set_mode"
+    risk: "LOW"
+    description: "Change HVAC mode between heat/cool/off"
+  - device: "thermostat"
+    action: "read"
+    risk: "LOW"
+    description: "Read thermostat current and target temperature"
+
+  # --- Garage Door (Medium Risk) ---
+  - device: "garage_door"
+    action: "open"
+    risk: "MEDIUM"
+    description: "Open the garage door (semi-secured entry)"
+  - device: "garage_door"
+    action: "close"
+    risk: "LOW"
+    description: "Close the garage door"
+  - device: "garage"
+    action: "open"
+    risk: "MEDIUM"
+    description: "Alias for garage door open"
+  - device: "garage"
+    action: "close"
+    risk: "LOW"
+    description: "Alias for garage door close"
+
+  # --- Front Door Lock (High Risk) ---
+  - device: "front_door_lock"
+    action: "unlock"
+    risk: "HIGH"
+    description: "Unlock front door (primary residence physical security perimeter)"
+  - device: "front_door_lock"
+    action: "lock"
+    risk: "LOW"
+    description: "Secure and lock the front door"
+  - device: "front_door"
+    action: "unlock"
+    risk: "HIGH"
+    description: "Alias for front door unlock"
+  - device: "front_door"
+    action: "lock"
+    risk: "LOW"
+    description: "Alias for front door lock"
+
+  # --- Porch Camera ---
+  - device: "porch_camera"
+    action: "read"
+    risk: "LOW"
+    description: "Read porch camera events and motion logs"
+  - device: "porch_camera"
+    action: "view_events"
+    risk: "LOW"
+    description: "View porch camera historical motion events"
+  - device: "porch_camera"
+    action: "disable"
+    risk: "HIGH"
+    description: "Disable security camera feeds"
+
+  # --- Package Sensor ---
+  - device: "package_sensor"
+    action: "read"
+    risk: "LOW"
+    description: "Inspect package sensor status and monetary value"
+  - device: "package_sensor"
+    action: "clear"
+    risk: "LOW"
+    description: "Acknowledge package retrieval"
