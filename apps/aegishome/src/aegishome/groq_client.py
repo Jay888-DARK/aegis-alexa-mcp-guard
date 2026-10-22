@@ -16,8 +16,20 @@ import copy
 import json
 import logging
 import os
+from pathlib import Path
 import time
 from typing import Any, Mapping
+from dotenv import load_dotenv, find_dotenv
+
+# Ensure .env is loaded with override=True before checking API keys
+load_dotenv(override=True)
+load_dotenv(find_dotenv(usecwd=True), override=True)
+_curr = Path(__file__).resolve().parent
+for _ in range(6):
+    if (_curr / ".env").exists():
+        load_dotenv(_curr / ".env", override=True)
+        break
+    _curr = _curr.parent
 
 try:
     from groq import Groq
@@ -66,7 +78,11 @@ def has_groq_api_key() -> bool:
 def get_groq_short_model_name(model_id: str) -> str:
     """Format model ID into clean label for UI chips."""
     mid = model_id.lower()
-    if "70b-8192-tool-use" in mid or "tool-use" in mid:
+    if "gpt-oss-120b" in mid:
+        return "GPT-OSS 120B"
+    elif "gpt-oss-20b" in mid:
+        return "GPT-OSS 20B"
+    elif "70b-8192-tool-use" in mid or "tool-use" in mid:
         return "Llama 3 70B Tool-Use"
     elif "3.3-70b" in mid:
         return "Llama 3.3 70B"
@@ -380,7 +396,7 @@ class GroqClient:
                                 "type": "confirmation_code",
                                 "code": secure_code,
                             })
-                            raw_result["note"] = "Confirmation code has been dispatched directly to the caregiver's card."
+                            raw_result["note"] = "Confirmation code has been dispatched directly to the caregiver's card. Please review the security request sent to your mobile device."
 
                     messages.append({
                         "role": "tool",

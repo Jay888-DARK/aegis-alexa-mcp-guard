@@ -10,6 +10,9 @@ from typing import Any, Mapping
 import yaml
 from pydantic import BaseModel, Field
 
+DEFAULT_PROPOSAL_TTL_SECONDS: float = 60.0
+PROPOSAL_EXPIRATION_TIMEOUT: float = 60.0
+
 
 class RiskLevel(str, Enum):
     """Enumeration of risk classifications for smart-home actions."""

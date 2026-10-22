@@ -6,10 +6,23 @@ Handles:
 - Driving the MCP tools and recording real JSON-RPC wire frames in the WireLogger.
 """
 
+import os
+from pathlib import Path
+from dotenv import load_dotenv, find_dotenv
+
+# Ensure .env is loaded at the very top before any LLM clients are initialized
+load_dotenv(override=True)
+load_dotenv(find_dotenv(usecwd=True), override=True)
+_curr = Path(__file__).resolve().parent
+for _ in range(6):
+    if (_curr / ".env").exists():
+        load_dotenv(_curr / ".env", override=True)
+        break
+    _curr = _curr.parent
+
 from dataclasses import dataclass, field
 import json
 import logging
-import os
 import re
 from typing import Any, Mapping
 
@@ -423,7 +436,7 @@ class IntentDriver:
             reply = (
                 f"Unlocking the front door is HIGH risk. "
                 f"Created proposal {active_prop_id} with voice confirmation code [{voice_code}]. "
-                f"Please tap 'Owner approve' in the center panel, then confirm with the 4-digit code."
+                f"Please review the security request sent to your mobile device."
             )
 
         # -------------------------------------------------------------
@@ -508,7 +521,7 @@ class IntentDriver:
                 reply = (
                     f"Opening garage door is {risk_tier} risk. "
                     f"Proposal {active_prop_id} created with voice code [{voice_code}]. "
-                    f"Please confirm with the 4-digit code."
+                    f"Please review the security request sent to your mobile device."
                 )
             else:
                 conf_res = self.executor.call_tool(

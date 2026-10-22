@@ -2,10 +2,14 @@ from pathlib import Path
 from dotenv import load_dotenv, find_dotenv
 
 # Load .env at the very top before any server or agent components are imported
-load_dotenv(find_dotenv(usecwd=True))
-_repo_root = Path(__file__).resolve().parents[4]
-if (_repo_root / ".env").exists():
-    load_dotenv(_repo_root / ".env")
+load_dotenv(override=True)
+load_dotenv(find_dotenv(usecwd=True), override=True)
+_curr = Path(__file__).resolve().parent
+for _ in range(6):
+    if (_curr / ".env").exists():
+        load_dotenv(_curr / ".env", override=True)
+        break
+    _curr = _curr.parent
 
 import argparse
 import os
@@ -39,7 +43,8 @@ def parse_args() -> argparse.Namespace:
 
 def run_server() -> None:
     args = parse_args()
-    print(f"Starting AegisHome MCP server on http://{args.host}:{args.port}")
+    print("GROQ API KEY DETECTED:", bool(os.environ.get("GROQ_API_KEY")), flush=True)
+    print(f"Starting AegisHome MCP server on http://{args.host}:{args.port}", flush=True)
     print(f"  - Streamable HTTP endpoint: http://{args.host}:{args.port}/mcp")
     print(f"  - Health check endpoint:   http://{args.host}:{args.port}/health")
     app = create_app()

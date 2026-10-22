@@ -69,6 +69,10 @@ def get_home_status() -> dict[str, Any]:
     return status
 
 
+PROPOSAL_TTL_SECONDS: float = 60.0
+PROPOSAL_EXPIRATION_TIMEOUT: float = 60.0
+
+
 def propose_action(
     action_type: str,
     target: str,
@@ -81,6 +85,7 @@ def propose_action(
     voice code for MEDIUM and HIGH tiers. Does NOT mutate device state.
     Session is bound authoritatively by the server; any caller-supplied session_id
     is ignored and audited.
+    Proposal validity TTL is strictly 60 seconds.
 
     Args:
         action_type: Category of action (e.g. 'unlock_door', 'set_temperature', 'open').
@@ -113,11 +118,15 @@ def propose_action(
         action=action_type,
         params=params,
         session_id=active_session,
+        ttl_seconds=PROPOSAL_TTL_SECONDS,
     )
     # Add convenience fields for callers
     proposal_res["action_type"] = action_type
     proposal_res["target"] = target
     proposal_res["parameters"] = params
+    if proposal_res.get("risk_tier") in ("HIGH", "MEDIUM"):
+        proposal_res["guidance"] = "Please review the security request sent to your mobile device."
+        proposal_res["note"] = "Please review the security request sent to your mobile device."
     return proposal_res
 
 

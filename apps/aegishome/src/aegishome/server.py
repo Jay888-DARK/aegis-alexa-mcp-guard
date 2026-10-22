@@ -4,10 +4,14 @@ from pathlib import Path
 from dotenv import load_dotenv, find_dotenv
 
 # Ensure .env is loaded at the very top of server.py before importing server or agent components
-load_dotenv(find_dotenv(usecwd=True))
-_repo_root = Path(__file__).resolve().parents[4]
-if (_repo_root / ".env").exists():
-    load_dotenv(_repo_root / ".env")
+load_dotenv(override=True)
+load_dotenv(find_dotenv(usecwd=True), override=True)
+_curr = Path(__file__).resolve().parent
+for _ in range(6):
+    if (_curr / ".env").exists():
+        load_dotenv(_curr / ".env", override=True)
+        break
+    _curr = _curr.parent
 
 import contextlib
 import os
@@ -293,6 +297,7 @@ def create_app(
         enable_dns_protection: Whether to enforce DNS rebinding protection. Defaults to env var
             or True for localhost/127.0.0.1.
     """
+    print("GROQ API KEY DETECTED:", bool(os.environ.get("GROQ_API_KEY")), flush=True)
     if mcp_server is None:
         mcp_server = create_mcp_server()
 

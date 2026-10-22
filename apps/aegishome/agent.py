@@ -11,9 +11,21 @@ import datetime
 import json
 import logging
 import os
+from pathlib import Path
 import random
 import time
 from typing import Any, Dict, List, Tuple
+from dotenv import load_dotenv, find_dotenv
+
+# Ensure .env is loaded with override=True before any client initialization
+load_dotenv(override=True)
+load_dotenv(find_dotenv(usecwd=True), override=True)
+_curr = Path(__file__).resolve().parent
+for _ in range(6):
+    if (_curr / ".env").exists():
+        load_dotenv(_curr / ".env", override=True)
+        break
+    _curr = _curr.parent
 
 import boto3
 from botocore.config import Config
@@ -407,7 +419,7 @@ def _run_turn_inner(
                                         "type": "confirmation_code",
                                         "code": secure_code,
                                     })
-                                    raw_result["note"] = "Confirmation code has been dispatched directly to the caregiver's card."
+                                    raw_result["note"] = "Confirmation code has been dispatched directly to the caregiver's card. Please review the security request sent to your mobile device."
 
                             tool_results.append({
                                 "toolResult": {

@@ -24,6 +24,7 @@ const state = {
 const chatForm = document.getElementById('chat-form');
 const utteranceInput = document.getElementById('utterance-input');
 const chatFeed = document.getElementById('chat-feed');
+const chatContainer = chatFeed;
 const typingIndicator = document.getElementById('typing-indicator');
 const btnMic = document.getElementById('btn-mic');
 const btnSend = document.getElementById('btn-send');
@@ -171,8 +172,15 @@ function updateSessionTaint(isTainted) {
 
 function clearPhoneApprovalCard() {
   state.activeProposal = null;
-  if (phoneApprovalCard) phoneApprovalCard.style.display = 'none';
-  if (phoneEmptyState) phoneEmptyState.style.display = 'flex';
+  if (phoneApprovalCard) {
+    phoneApprovalCard.style.display = 'none';
+  }
+  if (phoneEmptyState) {
+    phoneEmptyState.style.display = 'flex';
+  }
+  if (phonePropId) phonePropId.textContent = '-';
+  if (phoneVoiceCode) phoneVoiceCode.textContent = 'None';
+  if (phoneTaintWarning) phoneTaintWarning.style.display = 'none';
 }
 
 function updateProposalsAndPhone(proposals, isSessionTainted) {
@@ -359,8 +367,20 @@ window.showWhyAudit = function (auditQuery) {
 };
 
 // ---------------------------------------------------------------------
-// Chat Message Appending
+// Chat Message Appending & Auto-Scroll
 // ---------------------------------------------------------------------
+function scrollChatToBottom() {
+  const container = chatContainer || chatFeed;
+  if (!container) return;
+  container.scrollTop = container.scrollHeight;
+  setTimeout(() => {
+    container.scrollTop = container.scrollHeight;
+  }, 10);
+  setTimeout(() => {
+    container.scrollTop = container.scrollHeight;
+  }, 60);
+}
+
 function appendMeeraMessage(text) {
   const msgDiv = document.createElement('div');
   msgDiv.className = 'chat-message msg-meera';
@@ -371,7 +391,19 @@ function appendMeeraMessage(text) {
       <div class="msg-meta">Just now</div>
     </div>`;
   chatFeed.appendChild(msgDiv);
-  chatFeed.scrollTop = chatFeed.scrollHeight;
+  scrollChatToBottom();
+}
+
+function formatMarkdown(text) {
+  if (!text) return '';
+  let safe = escapeHtml(text);
+  // Convert markdown bold **text** to <strong>text</strong>
+  safe = safe.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  // Strip any leftover rogue double asterisks so they never appear as raw text
+  safe = safe.replace(/\*\*/g, '');
+  // Clean line breaks
+  safe = safe.replace(/\n/g, '<br/>');
+  return safe;
 }
 
 function appendAlexaMessage(text, isUntrusted = false) {
@@ -385,12 +417,12 @@ function appendAlexaMessage(text, isUntrusted = false) {
   msgDiv.innerHTML = `
     <div class="msg-bubble-alexa">
       <div class="msg-sender">Alexa+</div>
-      <div class="msg-content">${escapeHtml(text)}</div>
+      <div class="msg-content">${formatMarkdown(text)}</div>
       ${untrustedTagHtml}
       <div class="msg-meta">Just now</div>
     </div>`;
   chatFeed.appendChild(msgDiv);
-  chatFeed.scrollTop = chatFeed.scrollHeight;
+  scrollChatToBottom();
 }
 
 function appendInjectedMessage(text) {
@@ -405,7 +437,7 @@ function appendInjectedMessage(text) {
       <div class="msg-meta">Origin: External untrusted visitor note on porch</div>
     </div>`;
   chatFeed.appendChild(msgDiv);
-  chatFeed.scrollTop = chatFeed.scrollHeight;
+  scrollChatToBottom();
 }
 
 function appendStatusPill(type, text, whyQuery = '') {
@@ -420,16 +452,17 @@ function appendStatusPill(type, text, whyQuery = '') {
       <button class="pill-why-link" onclick="showWhyAudit('${escapeHtml(whyQuery)}')">Why?</button>
     </div>`;
   chatFeed.appendChild(pillDiv);
-  chatFeed.scrollTop = chatFeed.scrollHeight;
+  scrollChatToBottom();
 }
 
 function showTyping() {
   typingIndicator.style.display = 'flex';
-  chatFeed.scrollTop = chatFeed.scrollHeight;
+  scrollChatToBottom();
 }
 
 function hideTyping() {
   typingIndicator.style.display = 'none';
+  scrollChatToBottom();
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -512,14 +545,17 @@ function handleSamplePrompt() {
 // Manual Phone Approval / Denial
 // ---------------------------------------------------------------------
 async function handleManualPhoneApprove() {
-  if (!state.activeProposal) return;
-  const propId = state.activeProposal.proposal_id;
-  if (state.dismissedProposalIds) {
-    state.dismissedProposalIds.add(propId);
+  const propId = state.activeProposal ? state.activeProposal.proposal_id : (phonePropId ? phonePropId.textContent : null);
+  if (propId && propId !== '-') {
+    if (state.dismissedProposalIds) {
+      state.dismissedProposalIds.add(propId);
+    }
   }
 
-  // Immediately clear the active proposal card from the phone UI DOM and restore default "No approvals waiting" view
+  // Immediately remove the active proposal card from the phone UI DOM and restore "No approvals waiting" view
   clearPhoneApprovalCard();
+
+  if (!propId || propId === '-') return;
 
   try {
     await fetch('/api/approve', {
@@ -539,14 +575,17 @@ async function handleManualPhoneApprove() {
 }
 
 async function handleManualPhoneDeny() {
-  if (!state.activeProposal) return;
-  const propId = state.activeProposal.proposal_id;
-  if (state.dismissedProposalIds) {
-    state.dismissedProposalIds.add(propId);
+  const propId = state.activeProposal ? state.activeProposal.proposal_id : (phonePropId ? phonePropId.textContent : null);
+  if (propId && propId !== '-') {
+    if (state.dismissedProposalIds) {
+      state.dismissedProposalIds.add(propId);
+    }
   }
 
-  // Immediately clear the active proposal card from the phone UI DOM and restore default "No approvals waiting" view
+  // Immediately remove the active proposal card from the phone UI DOM and restore "No approvals waiting" view
   clearPhoneApprovalCard();
+
+  if (!propId || propId === '-') return;
 
   try {
     await fetch('/api/confirm', {
