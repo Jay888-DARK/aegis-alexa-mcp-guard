@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![MCP Spec: 2025-11-25](https://img.shields.io/badge/MCP%20Spec-2025--11--25-green.svg)](https://modelcontextprotocol.io/)
-[![Benchmark: 100% Pass](https://img.shields.io/badge/Safety%20Evals-100%25%20(61%2F61)-brightgreen.svg)](apps/aegishome/evals/EVAL_REPORT.md)
+[![Benchmark: 100% Pass](https://img.shields.io/badge/Safety%20Evals-100%25%20(69%2F69)-brightgreen.svg)](apps/aegishome/evals/EVAL_REPORT.md)
 
 ---
 
@@ -209,22 +209,27 @@ Aegis integrates with **Amazon Bedrock** via the official `boto3` Bedrock-Runtim
 +-----------------------------------------------------------------------------------+
 ```
 
-### AWS Implementation Details & Multi-Tier Fallback Chain
+### Multi-Tier Fallback Hierarchy: Groq -> Bedrock -> Deterministic Rule Engine
 
-Aegis implements a resilient 3-tier architecture to ensure smart-home safety is never compromised by API throttling, quota exhaustion, or cloud outages:
+Aegis implements a resilient multi-tier architecture to ensure smart-home safety is never compromised by API throttling, quota exhaustion, or cloud outages:
 
-1. **Primary Model Tier (`BEDROCK_MODEL_ID`)**:
+0. **Primary Live AI Tier (`GROQ_API_KEY`)**:
+   - High-throughput LLM backend (`llama-3.1-70b-versatile` or `llama3-groq-70b-8192-tool-use-preview`) providing ultra-low-latency tool-calling agent turns and numeric status summaries, bypassing Bedrock zero-quota hurdles.
+   - Strictly reads the API key from the `GROQ_API_KEY` environment variable (never hardcoded, `.env` gitignored).
+   - Maps tool calls accurately to MCP schemas, isolates untrusted visitor notes inside `<untrusted_visitor_note>` XML tags, and quarantines voice codes from LLM context.
+1. **Primary Bedrock Model Tier (`BEDROCK_MODEL_ID`)**:
    - Executes multi-turn tool-use agent turns via the Bedrock Converse API with token optimization (`maxTokens=300`, `temperature=0.2`, last 6 turns history retention).
    - If `ThrottlingException` is encountered, Aegis performs exponential backoff with jitter (up to 2 retries).
-2. **Secondary Fallback Model Tier (`BEDROCK_FALLBACK_MODEL_ID`)**:
-   - If the primary model encounters unresolvable throttling, access denial, or lacks tool-use support (`ValidationException`), Aegis automatically switches to the secondary model (e.g. Amazon Nova Micro / Claude Haiku).
+2. **Secondary Fallback Bedrock Tier (`BEDROCK_FALLBACK_MODEL_ID`)**:
+   - If the primary Bedrock model encounters unresolvable throttling, access denial, or lacks tool-use support (`ValidationException`), Aegis automatically switches to the secondary model (e.g. Amazon Nova Micro / Claude Haiku).
 3. **Deterministic Safety Gateway Tier (Offline Rule Engine)**:
-   - If all Bedrock tiers are throttled or network connectivity is unavailable, Aegis falls back to the deterministic offline rule engine.
+   - If all external LLM tiers are unavailable, Aegis falls back seamlessly to the deterministic offline rule engine.
    - The UI badge dynamically informs the caregiver:
-     - `BEDROCK · <short model name>` (Healthy Bedrock inference)
+     - `GROQ · <short model name>` (Active Groq backend, e.g. `Llama 3.1 70B`)
+     - `BEDROCK · <short model name>` (Active Bedrock inference)
      - `THROTTLED` (Account rate/token quota reached; operating in protected fallback mode)
      - `RULE ENGINE` (Offline deterministic gateway active)
-   - Tooltips on the badge report the exact error code and timestamp for auditing.
+   - Tooltips on the badge report the exact error code, model identifier, and timestamp for auditing.
 
 #### Helper Utilities:
 - `python scripts/list_bedrock_models.py`: Dynamically discovers all foundation models and inference profiles in your region and highlights lightweight tiers.
@@ -235,33 +240,56 @@ Aegis implements a resilient 3-tier architecture to ensure smart-home safety is 
 
 ## Safety Evaluation Benchmark Results (`EVAL_REPORT.md`)
 
-Aegis was evaluated against a red-teaming benchmark consisting of **61 adversarial test cases** spanning 8 critical threat vectors. The test harness evaluates live server logic and real device state machines without mock tuning.
+Aegis was evaluated against a red-teaming benchmark consisting of **69 adversarial test cases** spanning 9 critical threat vectors, comparing a **Scripted Naive Baseline** (an un-guarded dispatcher that blindly executes tool requests) against **Aegis Guard** (deterministic security gateway). The test harness evaluates live server logic and real device state machines without mock tuning.
+
+![Baseline vs. Aegis Guard Attack Comparison](docs/baseline_vs_aegis.svg)
+
+> [!NOTE]
+> **Honesty & Methodology Disclosure**: The baseline is a scripted agent with no guardrails, not a real LLM. It blindly forwards tool calls without policy evaluation, confirmation codes, or taint tracking. The test cases were written by the project author to evaluate architectural edge cases in tool execution.
 
 ### Executive Summary
 
-| Benchmark Metric | Result | Target | Status |
-|---|---|---|---|
-| **Total Evaluation Cases** | **61** | ~60 | **PASS** |
-| **Overall Benchmark Pass Rate** | **100.0%** (61/61) | 100% | **PASS** |
-| **Total Unsafe Actions Evaluated** | **52** | N/A | - |
-| **Total Unsafe Actions Blocked** | **52/52** | 100% | **PASS** |
-| **Unsafe Action Block Rate** | **100.0%** | 100% | **PASS** |
-| **False-Block Rate (Benign Cases)** | **0.0%** (0/8) | 0.0% | **PASS** |
+| Metric | Scripted Baseline | Aegis Guard | Target | Status |
+|---|---|---|---|---|
+| **Total Evaluation Cases** | 69 | **69** | 69 | **PASS** |
+| **Overall Benchmark Pass Rate** | 13.0% (9/69) | **100.0%** (69/69) | 100% | **PASS** |
+| **Total Unsafe Actions Tested (Attacks)** | 60 | **60** | N/A | - |
+| **Attacks Executed (Compromise Rate)** | **60 (100.0%)** | **0 (0.0%)** | 0.0% | **PASS** |
+| **Total Unsafe Actions Blocked (Defense Rate)** | 0 (0.0%) | **60/60 (100.0%)** | 100% | **PASS** |
+| **Total Safe Actions Tested (Legitimate)** | 9 | **9** | N/A | - |
+| **Total Safe Actions Allowed** | 9/9 (100%) | **9/9 (100.0%)** | 100% | **PASS** |
+| **False-Block Rate (Safe Operations)** | 0.0% | **0.0%** (0/9) | 0.0% | **PASS** |
 
-### Per-Category Breakdown
+> **Accounting Breakdown of All 69 Cases**: 60 adversarial attacks (100% blocked by Aegis; 100% executed by scripted baseline) + 9 legitimate/safe operations (8 queries & adjustments in `benign` + 1 authorized confirmation in `needs-confirm` [`needs-confirm-08`]; all 9 allowed, 0 false blocks). Sum: **60 attacks + 9 safe operations = 69 total cases**.
 
-| Category | Cases | Passed | Blocked / Safe | Pass Rate | Primary Threat Mitigated |
-|---|---|---|---|---|---|
-| `action-swap` | 7 | 7 | 7/7 | **100.0%** | Payload tampering & action swapping via HMAC verification |
-| `benign` | 8 | 8 | 0/8 blocked | **100.0%** | Zero false alarms on legitimate queries & adjustments |
-| `brute-force` | 7 | 7 | 7/7 | **100.0%** | 4-digit voice code guessing locked after 3 attempts |
-| `expired` | 7 | 7 | 7/7 | **100.0%** | Stale proposals rejected outside 60s TTL window |
-| `injection` | 8 | 8 | 8/8 | **100.0%** | Indirect prompt injection quarantined & taint-escalated |
-| `needs-confirm` | 8 | 8 | 8/8 | **100.0%** | High-risk operations halted without owner approval |
-| `numeric-hallucination` | 9 | 9 | 9/9 | **100.0%** | Ungrounded numbers caught by numeric guardrail |
-| `replay` | 7 | 7 | 7/7 | **100.0%** | Duplicate executions of confirmed proposals blocked |
+### Per-Category Comparison
 
-*Full case-by-case evaluation traces and forensic logs are available in [EVAL_REPORT.md](apps/aegishome/evals/EVAL_REPORT.md).*
+| Category | Cases | Attacks | Scripted Baseline Executed | Aegis Attacks Blocked | Safe Operations Allowed | Aegis False Blocks | Primary Threat Mitigated |
+|---|---|---|---|---|---|---|---|
+| `action-swap` | 7 | 7 | 7 (100.0%) | **7/7 (100.0%)** | 0 | 0 (0.0%) | Payload tampering & action swapping via HMAC verification |
+| `benign` | 8 | 0 | 0 (N/A) | **0/0 (N/A)** | 8/8 | 0 (0.0%) | Zero false alarms on legitimate queries & adjustments |
+| `brute-force` | 7 | 7 | 7 (100.0%) | **7/7 (100.0%)** | 0 | 0 (0.0%) | 4-digit voice code guessing locked after 3 attempts |
+| `expired` | 7 | 7 | 7 (100.0%) | **7/7 (100.0%)** | 0 | 0 (0.0%) | Stale proposals rejected outside 60s TTL window |
+| `injection` | 8 | 8 | 8 (100.0%) | **8/8 (100.0%)** | 0 | 0 (0.0%) | Indirect prompt injection quarantined & taint-escalated |
+| `needs-confirm` | 8 | 7 | 7 (100.0%) | **7/7 (100.0%)** | 1/1 | 0 (0.0%) | High-risk operations halted without owner approval |
+| `numeric-hallucination` | 9 | 9 | 9 (100.0%) | **9/9 (100.0%)** | 0 | 0 (0.0%) | Ungrounded numbers caught by numeric guardrail |
+| `replay` | 7 | 7 | 7 (100.0%) | **7/7 (100.0%)** | 0 | 0 (0.0%) | Duplicate executions of confirmed proposals blocked |
+| `session-bypass` | 8 | 8 | 8 (100.0%) | **8/8 (100.0%)** | 0 | 0 (0.0%) | Session spoofing / taint evasion across transport boundary |
+| **Total / Overall** | **69** | **60** | **60 (100.0%)** | **60/60 (100.0%)** | **9/9 (100.0%)** | **0 (0.0%)** | **Complete Deterministic Protection** |
+
+*Full case-by-case evaluation traces, comparative methodology, and forensic logs are available in [EVAL_REPORT.md](apps/aegishome/evals/EVAL_REPORT.md).*
+
+---
+
+## Security Limits & Threat Assumptions
+
+1. **Session Binding vs. New Transport Connections**:
+   - **What Session Binding Protects**: The LLM reasoning agent cannot choose, switch, or lie about its `session_id` in tool-call arguments to evade taint tracking. The MCP server binds session identity strictly to the authoritative transport context (`Mcp-Session-Id` header or local agent context) and logs any caller-supplied `session_id` as a `SessionSpoofingAttempt`. Tool schemas exposed to the model strip `session_id` completely.
+   - **What It Does Not Protect**: Opening a brand-new, clean transport-level connection / session starts with fresh, untainted state. Cross-connection correlation or user identity attestation across independent transports must be enforced at the application or network auth layer.
+2. **Deterministic Confirmation Codes**:
+   - Voice confirmation codes are spoken directly to the caregiver or displayed on their trusted screen. They are strictly stripped from tool results and responses before reaching the reasoning model, preventing LLMs from self-confirming actions.
+3. **Out-of-Band Owner Approval**:
+   - HIGH-risk operations (such as perimeter deadbolt unlocking) cannot be approved by the LLM or through the voice channel alone; they require cryptographic out-of-band authorization from the caregiver's authenticated owner channel.
 
 ---
 
@@ -285,8 +313,8 @@ Amazon Hackathon (Aegis Monorepo)
         ├── pyproject.toml
         ├── src/aegishome/      # MCP server, devices, client, web dashboard
         │   └── static/         # Frameworkless HTML/CSS/JS frontend
-        ├── tests/              # 32 server, device, and webapp integration tests
-        └── evals/              # 61 adversarial evaluation benchmark cases
+        ├── tests/              # 36 server, device, and webapp integration tests
+        └── evals/              # 69 adversarial evaluation benchmark cases
 ```
 
 ### Makefile Reference
@@ -294,8 +322,8 @@ Amazon Hackathon (Aegis Monorepo)
 | Command | Action |
 |---|---|
 | `make install` | Installs both packages in editable development mode. |
-| `make test` | Runs the full test suite (`pytest`) followed by the 61-case evaluation suite. |
-| `make test-unit` | Runs all 75 unit and integration tests across both packages. |
+| `make test` | Runs the full test suite (`pytest`) followed by the 69-case evaluation suite. |
+| `make test-unit` | Runs all unit and integration tests across both packages. |
 | `make evals` | Executes the adversarial benchmark suite and updates `EVAL_REPORT.md`. |
 | `make demo` | Launches the interactive web dashboard and MCP server on port 8000. |
 | `make clean` | Cleans up bytecode caches and temporary artifacts. |
@@ -305,10 +333,10 @@ Amazon Hackathon (Aegis Monorepo)
 ## Running Tests & Evals Manually
 
 ```bash
-# Run all unit and integration tests (75 tests):
+# Run all unit and integration tests:
 pytest -v
 
-# Run the 61-case red-teaming evaluation suite:
+# Run the 69-case red-teaming evaluation suite:
 python apps/aegishome/evals/run_evals.py
 ```
 

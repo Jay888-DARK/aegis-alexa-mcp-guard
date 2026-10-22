@@ -38,13 +38,19 @@ import tempfile
 import time
 from typing import Any
 import urllib.request
+import httpx
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 # Official MCP Client imports
 from mcp.client.session import ClientSession
 from mcp.client.streamable_http import streamable_http_client
-from mcp.server.streamable_http import is_version_at_least
+try:
+    from mcp.server.streamable_http import is_version_at_least
+except ImportError:
+    def is_version_at_least(v: str, min_v: str) -> bool:
+        return str(v) >= str(min_v)
+
 
 # Aegis Guard & AegisHome imports
 from aegis_guard.storage import AegisStorage
@@ -133,6 +139,8 @@ def extract_tool_data(result: Any) -> dict[str, Any]:
     """Extract dict payload from MCP CallToolResult (supports structured_content or text content)."""
     if hasattr(result, "structured_content") and isinstance(result.structured_content, dict):
         return result.structured_content
+    if hasattr(result, "structuredContent") and isinstance(result.structuredContent, dict):
+        return result.structuredContent
     if hasattr(result, "content") and result.content:
         first = result.content[0]
         if hasattr(first, "text") and first.text:
@@ -172,8 +180,8 @@ async def run_smoke_test() -> list[CheckResult]:
             results.append(CheckResult(1, step_1_name, "FAIL", line))
             return results
 
-        # Connect MCP Client for steps 2 - 8
-        async with streamable_http_client(mcp_url) as (read_stream, write_stream):
+        async with streamable_http_client(mcp_url) as streams:
+            read_stream, write_stream = streams[0], streams[1]
             async with ClientSession(read_stream, write_stream) as session:
                 # -------------------------------------------------------------
                 # Step 2: Protocol version negotiation and 4 expected tools
@@ -551,7 +559,8 @@ async def run_smoke_test() -> list[CheckResult]:
         try:
             wait_for_health(base_url2, timeout=15.0)
 
-            async with streamable_http_client(mcp_url2) as (read_stream2, write_stream2):
+            async with streamable_http_client(mcp_url2) as streams2:
+                read_stream2, write_stream2 = streams2[0], streams2[1]
                 async with ClientSession(read_stream2, write_stream2) as session2:
                     await session2.initialize()
 

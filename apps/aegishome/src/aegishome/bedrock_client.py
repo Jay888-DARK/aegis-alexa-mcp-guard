@@ -25,6 +25,7 @@ logger = logging.getLogger("aegishome.bedrock")
 
 DEFAULT_BEDROCK_MODEL_ID = "anthropic.claude-3-haiku-20240307-v1:0"
 PATH_BEDROCK_VERIFIED = "bedrock_verified"
+PATH_GROQ_VERIFIED = "groq_verified"
 PATH_DETERMINISTIC_FALLBACK = "deterministic_fallback"
 
 
@@ -245,35 +246,53 @@ def generate_home_summary(
     draft_text = ""
     violations: list[str] = []
 
-    # 1. Attempt to generate draft with Bedrock or passed model
+    # 1. Attempt to generate draft with passed model, or Groq (if configured), or Bedrock
+    target_path = PATH_BEDROCK_VERIFIED
     try:
-        active_model = model or BedrockClient()
+        if model is not None:
+            active_model = model
+            target_path = getattr(model, "path_label", PATH_BEDROCK_VERIFIED)
+        else:
+            groq_key = os.environ.get("GROQ_API_KEY")
+            if groq_key and groq_key.strip():
+                try:
+                    from aegishome.groq_client import GroqClient
+                    active_model = GroqClient(api_key=groq_key.strip())
+                    target_path = PATH_GROQ_VERIFIED
+                except Exception:
+                    active_model = BedrockClient()
+                    target_path = PATH_BEDROCK_VERIFIED
+            else:
+                active_model = BedrockClient()
+                target_path = PATH_BEDROCK_VERIFIED
+
         draft_text = active_model.draft_summary(facts, untrusted_content)
     except Exception as e:
+        err_prefix = "Groq" if target_path == PATH_GROQ_VERIFIED else "Bedrock"
         logger.warning(
-            f"Bedrock generation failed ({type(e).__name__}: {e}). "
+            f"{err_prefix} generation failed ({type(e).__name__}: {e}). "
             f"Switching to deterministic fallback path."
         )
         get_audit_logger().log_block(
             action="generate_home_summary",
-            reason=f"Bedrock invocation failed: {e}",
+            reason=f"{err_prefix} invocation failed: {e}",
             error_type=type(e).__name__,
         )
         fallback = deterministic_template_summary(facts)
-        return fallback, PATH_DETERMINISTIC_FALLBACK, [f"Bedrock invocation failed: {e}"]
+        return fallback, PATH_DETERMINISTIC_FALLBACK, [f"{err_prefix} invocation failed: {e}"]
 
     # 2. Verify with Numeric Guard
     ok, violations = verify(draft_text, facts)
 
     if ok and draft_text:
-        logger.info(f"Summary passed numeric verification. Using {PATH_BEDROCK_VERIFIED} path.")
+        logger.info(f"Summary passed numeric verification. Using {target_path} path.")
         get_audit_logger().log_event(
             event_type="SUMMARY_VERIFIED",
             action="generate_home_summary",
             reason="Summary passed numeric verification",
-            details={"path": PATH_BEDROCK_VERIFIED},
+            details={"path": target_path},
         )
-        return draft_text, PATH_BEDROCK_VERIFIED, []
+        return draft_text, target_path, []
     else:
         logger.warning(
             f"Numeric Guard rejected draft with {len(violations)} violations. "

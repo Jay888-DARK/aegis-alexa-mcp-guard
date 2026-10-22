@@ -11,6 +11,8 @@
 3. **[AWS-01]** Amazon Bedrock Converse API Offline / CI Testing Pattern
 4. **[MCP-03]** Starlette Route Ordering Conflict Between Catch-All Streamable HTTP Mount and REST/UI Endpoints
 5. **[AWS-02]** Daily Token Quota ThrottlingException on High-Tier Foundation Models
+6. **[MCP-04]** Streamable HTTP AnyIO Worker Task ContextVar Isolation for Session Binding
+7. **[LLM-01]** Bedrock Zero-Quota Sandbox Limits Bypassed via Dual Groq/Bedrock Tool-Calling Fallback
 
 ---
 
@@ -118,4 +120,42 @@
   3. **Multi-Tier Model Failover**: Configure `BEDROCK_FALLBACK_MODEL_ID` (targeting lighter models with higher quotas, such as Amazon Nova Micro or Claude Haiku) and seamlessly fall back to an offline deterministic rule engine if all Bedrock tiers are throttled.
 - **Suggestion**:
   - Provide automated multi-model routing / fallback capabilities directly within the Bedrock client SDK or Converse API configuration.
+
+---
+
+### [MCP-04] Streamable HTTP AnyIO Worker Task ContextVar Isolation for Session Binding
+
+- **Component**: `mcp.server.streamable_http` / `mcp.server.fastmcp.server` / AnyIO TaskGroup
+- **Task**: Reliably extract and bind client `Mcp-Session-Id` transport headers to ambient server context so that tool handlers (`propose_action`, `confirm_action`) can enforce taint tracking and session isolation without requiring callers to pass spoofable `session_id` arguments.
+- **Steps to Reproduce**:
+  1. Mount an MCP Streamable HTTP app in Starlette wrapped with ASGI middleware setting a Python `ContextVar` (`_CURRENT_SESSION_ID.set(mcp_session_id)`).
+  2. The client connects and performs an initial handshake, spawning the internal `app.run` worker task.
+  3. Subsequent POST requests invoke tool handlers.
+- **Expected vs Actual**:
+  - *Expected*: The tool handler reads the ambient `ContextVar` set by ASGI middleware during the current HTTP request.
+  - *Actual*: In FastMCP/Streamable HTTP, the server runs as an independent long-running worker task spawned during session creation. Context variable modifications in the HTTP request task do not propagate across AnyIO memory object streams to the pre-existing server task, causing the tool handler to observe `ContextVar.get() is None`.
+- **Severity**: High (Triggers fail-closed fallback or breaks session-bound security controls)
+- **Workaround**: Query `mcp.server.lowlevel.server.request_ctx` directly from within the tool execution context. During request dispatch, `Server._handle_request` sets `request_ctx` with `ServerMessageMetadata.request_context` (the underlying Starlette `Request`), allowing reliable extraction of `request.headers.get("mcp-session-id")`.
+- **Suggestion**:
+  - FastMCP should natively expose the authoritative session ID on `Context` (e.g. `context.session_id`) to all registered tool functions.
+
+---
+
+### [LLM-01] Bedrock Zero-Quota Sandbox Limits Bypassed via Dual Groq/Bedrock Tool-Calling Fallback
+
+- **Component**: AWS Bedrock Runtime Quota Management / Multi-Cloud Fallback Architecture
+- **Task**: Run live, interactive AI agent tool-calling demonstrations and automated red-teaming evaluations in AWS accounts where foundation model quotas are pending approval or set to zero.
+- **Steps to Reproduce**:
+  1. Attempt live Bedrock Converse calls (`anthropic.claude-3-haiku-20240307-v1:0` or `meta.llama3-70b-instruct-v1:0`) in a new or restricted AWS account.
+  2. Boto3 raises `AccessDeniedException` or `ThrottlingException: daily token quota reached` with zero quota allocated.
+- **Expected vs Actual**:
+  - *Expected*: Live demo can interactively parse spoken caregiver intent and execute MCP tool calling.
+  - *Actual*: Zero-quota block prevents the live AI backend from executing.
+- **Severity**: Critical (Blocks live evaluation and video demonstration)
+- **Workaround**: Implement an extensible primary active tier (`GroqClient`) supporting ultra-high-throughput tool calling (`llama-3.1-70b-versatile`) mapped 1:1 to MCP tool schemas, with automatic fallback:
+  $$\text{GROQ} \longrightarrow \text{BEDROCK} \longrightarrow \text{DETERMINISTIC RULE ENGINE}$$
+  The API key is strictly sourced from `GROQ_API_KEY` (never hardcoded, `.env` gitignored), allowing live video demonstration with zero cloud quota friction.
+- **Suggestion**:
+  - AWS Bedrock sandbox accounts should provision a baseline starter token quota for hackathon developers to enable prototyping without manual quota increase requests.
+
 

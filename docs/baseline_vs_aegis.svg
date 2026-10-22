@@ -1,0 +1,185 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" width="100%" height="100%" style="background:#0b1120; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,sans-serif;">
+
+    <defs>
+      <linearGradient id="baselineGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ef4444" />
+        <stop offset="100%" stop-color="#b91c1c" />
+      </linearGradient>
+      <linearGradient id="aegisBlockedGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#3b82f6" />
+        <stop offset="100%" stop-color="#1d4ed8" />
+      </linearGradient>
+      <linearGradient id="aegisExecGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#10b981" />
+        <stop offset="100%" stop-color="#047857" />
+      </linearGradient>
+      <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+        <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.3" />
+      </filter>
+    </defs>
+    
+
+    <!-- Title and Subtitle -->
+    <text x="65" y="38" fill="#f8fafc" font-size="20" font-weight="700">Aegis Guard vs. Scripted Baseline — Attack Flow Execution Comparison</text>
+    <text x="65" y="62" fill="#94a3b8" font-size="13">Red-teaming evaluation across 69 adversarial and benign cases (60 attack flows, 9 safe operations)</text>
+    
+
+    <!-- KPI Badge 1: Baseline -->
+    <rect x="65" y="78" width="260" height="24" rx="4" fill="#1e293b" stroke="#ef4444" stroke-width="1"/>
+    <circle cx="77" cy="90" r="4" fill="#ef4444"/>
+    <text x="89" y="94" fill="#f8fafc" font-size="11" font-weight="600">Scripted Baseline: <tspan fill="#f87171">60/60 Executed (100% Breached)</tspan></text>
+
+    <!-- KPI Badge 2: Aegis Attacks Blocked -->
+    <rect x="340" y="78" width="250" height="24" rx="4" fill="#1e293b" stroke="#3b82f6" stroke-width="1"/>
+    <circle cx="352" cy="90" r="4" fill="#3b82f6"/>
+    <text x="364" y="94" fill="#f8fafc" font-size="11" font-weight="600">Aegis Guard: <tspan fill="#60a5fa">60/60 Attacks Blocked (100%)</tspan></text>
+
+    <!-- KPI Badge 3: Aegis False Blocks -->
+    <rect x="605" y="78" width="250" height="24" rx="4" fill="#1e293b" stroke="#10b981" stroke-width="1"/>
+    <circle cx="617" cy="90" r="4" fill="#10b981"/>
+    <text x="629" y="94" fill="#f8fafc" font-size="11" font-weight="600">Aegis False Alarms: <tspan fill="#34d399">0/9 Blocked (0.0% False Rate)</tspan></text>
+    
+
+        <line x1="65" y1="470.0" x2="920" y2="470.0" stroke="#1e293b" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="55" y="474.0" fill="#64748b" font-size="11" text-anchor="end">0</text>
+        
+
+        <line x1="65" y1="398.0" x2="920" y2="398.0" stroke="#1e293b" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="55" y="402.0" fill="#64748b" font-size="11" text-anchor="end">2</text>
+        
+
+        <line x1="65" y1="326.0" x2="920" y2="326.0" stroke="#1e293b" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="55" y="330.0" fill="#64748b" font-size="11" text-anchor="end">4</text>
+        
+
+        <line x1="65" y1="254.0" x2="920" y2="254.0" stroke="#1e293b" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="55" y="258.0" fill="#64748b" font-size="11" text-anchor="end">6</text>
+        
+
+        <line x1="65" y1="182.0" x2="920" y2="182.0" stroke="#1e293b" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="55" y="186.0" fill="#64748b" font-size="11" text-anchor="end">8</text>
+        
+
+        <line x1="65" y1="110.0" x2="920" y2="110.0" stroke="#1e293b" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="55" y="114.0" fill="#64748b" font-size="11" text-anchor="end">10</text>
+        
+<text transform="rotate(-90 20 290)" x="20" y="290" fill="#94a3b8" font-size="11" font-weight="600" text-anchor="middle">Number of Test Cases</text>
+
+            <rect x="83.5" y="218.00000000000003" width="26" height="251.99999999999997" rx="3" fill="url(#baselineGrad)" filter="url(#shadow)"/>
+            <text x="96.5" y="212.00000000000003" fill="#fca5a5" font-size="11" font-weight="700" text-anchor="middle">7</text>
+            
+
+            <rect x="115.5" y="218.00000000000003" width="26" height="251.99999999999997" rx="3" fill="url(#aegisBlockedGrad)" filter="url(#shadow)"/>
+            <text x="128.5" y="212.00000000000003" fill="#93c5fd" font-size="11" font-weight="700" text-anchor="middle">7</text>
+            
+
+        <text x="112.5" y="490" fill="#e2e8f0" font-size="11" font-weight="500" text-anchor="middle">action-swap</text>
+        
+
+            <rect x="178.5" y="468" width="26" height="2" fill="#475569" opacity="0.4"/>
+            <text x="191.5" y="464" fill="#64748b" font-size="10" text-anchor="middle">0</text>
+            
+
+            <rect x="210.5" y="468" width="26" height="2" fill="#475569" opacity="0.4"/>
+            <text x="223.5" y="464" fill="#34d399" font-size="10" font-weight="600" text-anchor="middle">8 safe</text>
+            
+
+        <text x="207.5" y="490" fill="#e2e8f0" font-size="11" font-weight="500" text-anchor="middle">benign</text>
+        
+
+            <rect x="273.5" y="218.00000000000003" width="26" height="251.99999999999997" rx="3" fill="url(#baselineGrad)" filter="url(#shadow)"/>
+            <text x="286.5" y="212.00000000000003" fill="#fca5a5" font-size="11" font-weight="700" text-anchor="middle">7</text>
+            
+
+            <rect x="305.5" y="218.00000000000003" width="26" height="251.99999999999997" rx="3" fill="url(#aegisBlockedGrad)" filter="url(#shadow)"/>
+            <text x="318.5" y="212.00000000000003" fill="#93c5fd" font-size="11" font-weight="700" text-anchor="middle">7</text>
+            
+
+        <text x="302.5" y="490" fill="#e2e8f0" font-size="11" font-weight="500" text-anchor="middle">brute-force</text>
+        
+
+            <rect x="368.5" y="218.00000000000003" width="26" height="251.99999999999997" rx="3" fill="url(#baselineGrad)" filter="url(#shadow)"/>
+            <text x="381.5" y="212.00000000000003" fill="#fca5a5" font-size="11" font-weight="700" text-anchor="middle">7</text>
+            
+
+            <rect x="400.5" y="218.00000000000003" width="26" height="251.99999999999997" rx="3" fill="url(#aegisBlockedGrad)" filter="url(#shadow)"/>
+            <text x="413.5" y="212.00000000000003" fill="#93c5fd" font-size="11" font-weight="700" text-anchor="middle">7</text>
+            
+
+        <text x="397.5" y="490" fill="#e2e8f0" font-size="11" font-weight="500" text-anchor="middle">expired</text>
+        
+
+            <rect x="463.5" y="182.0" width="26" height="288.0" rx="3" fill="url(#baselineGrad)" filter="url(#shadow)"/>
+            <text x="476.5" y="176.0" fill="#fca5a5" font-size="11" font-weight="700" text-anchor="middle">8</text>
+            
+
+            <rect x="495.5" y="182.0" width="26" height="288.0" rx="3" fill="url(#aegisBlockedGrad)" filter="url(#shadow)"/>
+            <text x="508.5" y="176.0" fill="#93c5fd" font-size="11" font-weight="700" text-anchor="middle">8</text>
+            
+
+        <text x="492.5" y="490" fill="#e2e8f0" font-size="11" font-weight="500" text-anchor="middle">injection</text>
+        
+
+            <rect x="558.5" y="218.00000000000003" width="26" height="251.99999999999997" rx="3" fill="url(#baselineGrad)" filter="url(#shadow)"/>
+            <text x="571.5" y="212.00000000000003" fill="#fca5a5" font-size="11" font-weight="700" text-anchor="middle">7</text>
+            
+
+            <rect x="590.5" y="218.00000000000003" width="26" height="251.99999999999997" rx="3" fill="url(#aegisBlockedGrad)" filter="url(#shadow)"/>
+            <text x="603.5" y="212.00000000000003" fill="#93c5fd" font-size="11" font-weight="700" text-anchor="middle">7</text>
+            
+
+        <text x="587.5" y="490" fill="#e2e8f0" font-size="11" font-weight="500" text-anchor="middle">needs-confirm</text>
+        
+
+            <rect x="653.5" y="146.0" width="26" height="324.0" rx="3" fill="url(#baselineGrad)" filter="url(#shadow)"/>
+            <text x="666.5" y="140.0" fill="#fca5a5" font-size="11" font-weight="700" text-anchor="middle">9</text>
+            
+
+            <rect x="685.5" y="146.0" width="26" height="324.0" rx="3" fill="url(#aegisBlockedGrad)" filter="url(#shadow)"/>
+            <text x="698.5" y="140.0" fill="#93c5fd" font-size="11" font-weight="700" text-anchor="middle">9</text>
+            
+
+        <text x="682.5" y="490" fill="#e2e8f0" font-size="11" font-weight="500" text-anchor="middle">num-halluc</text>
+        
+
+            <rect x="748.5" y="218.00000000000003" width="26" height="251.99999999999997" rx="3" fill="url(#baselineGrad)" filter="url(#shadow)"/>
+            <text x="761.5" y="212.00000000000003" fill="#fca5a5" font-size="11" font-weight="700" text-anchor="middle">7</text>
+            
+
+            <rect x="780.5" y="218.00000000000003" width="26" height="251.99999999999997" rx="3" fill="url(#aegisBlockedGrad)" filter="url(#shadow)"/>
+            <text x="793.5" y="212.00000000000003" fill="#93c5fd" font-size="11" font-weight="700" text-anchor="middle">7</text>
+            
+
+        <text x="777.5" y="490" fill="#e2e8f0" font-size="11" font-weight="500" text-anchor="middle">replay</text>
+        
+
+            <rect x="843.5" y="182.0" width="26" height="288.0" rx="3" fill="url(#baselineGrad)" filter="url(#shadow)"/>
+            <text x="856.5" y="176.0" fill="#fca5a5" font-size="11" font-weight="700" text-anchor="middle">8</text>
+            
+
+            <rect x="875.5" y="182.0" width="26" height="288.0" rx="3" fill="url(#aegisBlockedGrad)" filter="url(#shadow)"/>
+            <text x="888.5" y="176.0" fill="#93c5fd" font-size="11" font-weight="700" text-anchor="middle">8</text>
+            
+
+        <text x="872.5" y="490" fill="#e2e8f0" font-size="11" font-weight="500" text-anchor="middle">session-bypass</text>
+        
+<line x1="65" y1="470" x2="920" y2="470" stroke="#334155" stroke-width="1.5"/>
+
+    <!-- Legend -->
+    <g transform="translate(125, 522)">
+      <rect x="0" y="0" width="14" height="14" rx="2" fill="url(#baselineGrad)"/>
+      <text x="20" y="11" fill="#cbd5e1" font-size="11">Scripted Baseline (Attacks Executed / Compromised)</text>
+
+      <rect x="360" y="0" width="14" height="14" rx="2" fill="url(#aegisBlockedGrad)"/>
+      <text x="380" y="11" fill="#cbd5e1" font-size="11">Aegis Guard (Attacks Blocked / Quarantined)</text>
+
+      <rect x="670" y="0" width="14" height="14" rx="2" fill="#10b981"/>
+      <text x="690" y="11" fill="#cbd5e1" font-size="11">Aegis Executed (Attacks: 0)</text>
+    </g>
+
+    <!-- Honesty & Methodology Disclosure Note -->
+    <text x="480.0" y="548" fill="#64748b" font-size="10" text-anchor="middle" font-style="italic">
+      Methodology Disclosure: Scripted baseline represents an un-guarded agentic control flow, not a live LLM. Tests authored by project developers.
+    </text>
+    
+</svg>

@@ -72,7 +72,8 @@ async def test_health_endpoint(running_server: str) -> None:
 async def test_protocol_version_negotiation(running_server: str) -> None:
     """Verify MCP protocol version negotiation satisfies spec 2025-11-25 or later."""
     mcp_url = f"{running_server}/mcp"
-    async with streamable_http_client(mcp_url) as (read_stream, write_stream):
+    async with streamable_http_client(mcp_url) as streams:
+        read_stream, write_stream = streams[0], streams[1]
         async with ClientSession(read_stream, write_stream) as session:
             init_result = await session.initialize()
             negotiated_version = init_result.protocol_version
@@ -87,7 +88,8 @@ async def test_protocol_version_negotiation(running_server: str) -> None:
 async def test_list_tools(running_server: str) -> None:
     """Verify that all 4 smart-home caregiver tools are exposed over Streamable HTTP."""
     mcp_url = f"{running_server}/mcp"
-    async with streamable_http_client(mcp_url) as (read_stream, write_stream):
+    async with streamable_http_client(mcp_url) as streams:
+        read_stream, write_stream = streams[0], streams[1]
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
             tools_response = await session.list_tools()
@@ -105,7 +107,8 @@ async def test_list_tools(running_server: str) -> None:
 async def test_call_tool_get_home_status(running_server: str) -> None:
     """Verify get_home_status returns resident and device states."""
     mcp_url = f"{running_server}/mcp"
-    async with streamable_http_client(mcp_url) as (read_stream, write_stream):
+    async with streamable_http_client(mcp_url) as streams:
+        read_stream, write_stream = streams[0], streams[1]
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
             result = await session.call_tool("get_home_status", {})
@@ -125,7 +128,8 @@ async def test_call_tool_get_home_status(running_server: str) -> None:
 async def test_call_tool_propose_and_confirm_action(running_server: str) -> None:
     """Verify the propose_action -> confirm_action lifecycle through MCP client."""
     mcp_url = f"{running_server}/mcp"
-    async with streamable_http_client(mcp_url) as (read_stream, write_stream):
+    async with streamable_http_client(mcp_url) as streams:
+        read_stream, write_stream = streams[0], streams[1]
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
 
@@ -178,7 +182,8 @@ async def test_call_tool_propose_and_confirm_action(running_server: str) -> None
 async def test_call_tool_confirm_action_invalid_id(running_server: str) -> None:
     """Verify confirm_action returns NOT_FOUND for non-existent proposals."""
     mcp_url = f"{running_server}/mcp"
-    async with streamable_http_client(mcp_url) as (read_stream, write_stream):
+    async with streamable_http_client(mcp_url) as streams:
+        read_stream, write_stream = streams[0], streams[1]
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
             confirm_res = await session.call_tool(
@@ -199,7 +204,8 @@ async def test_call_tool_confirm_action_invalid_id(running_server: str) -> None:
 async def test_call_tool_read_visitor_note(running_server: str) -> None:
     """Verify read_visitor_note returns untrusted visitor note with taint label."""
     mcp_url = f"{running_server}/mcp"
-    async with streamable_http_client(mcp_url) as (read_stream, write_stream):
+    async with streamable_http_client(mcp_url) as streams:
+        read_stream, write_stream = streams[0], streams[1]
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
 

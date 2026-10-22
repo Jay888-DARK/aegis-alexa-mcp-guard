@@ -6,6 +6,7 @@ token savings, and deterministic rule engine safety fallback.
 
 from __future__ import annotations
 
+import copy
 import datetime
 import json
 import logging
@@ -49,7 +50,15 @@ def _get_short_model_name(model_id: str) -> str:
         if clean.lower().startswith(prefix):
             clean = clean[len(prefix):]
 
-    if "nova-micro" in mid or "nova micro" in mid:
+    if "70b-8192-tool-use" in mid or "tool-use" in mid:
+        return "Llama 3 70B Tool-Use"
+    elif "3.3-70b" in mid:
+        return "Llama 3.3 70B"
+    elif "3.1-70b" in mid:
+        return "Llama 3.1 70B"
+    elif "3.1-8b" in mid:
+        return "Llama 3.1 8B"
+    elif "nova-micro" in mid or "nova micro" in mid:
         return "Nova Micro"
     elif "nova-lite" in mid or "nova lite" in mid:
         return "Nova Lite"
@@ -74,8 +83,11 @@ def _get_short_model_name(model_id: str) -> str:
     return base[:18]
 
 
+from aegishome.session_context import set_current_session_id, reset_current_session_id
+
+
 def _build_tool_config(mcp_client: Any) -> Dict[str, Any]:
-    """Fetch live schemas from MCP and format them for Bedrock Converse."""
+    """Fetch live schemas from MCP, strip session_id, and format them for Bedrock Converse."""
     tools_response = mcp_client.list_tools()
     tool_config: Dict[str, Any] = {"tools": []}
 
@@ -83,11 +95,21 @@ def _build_tool_config(mcp_client: Any) -> Dict[str, Any]:
 
     for tool in tools_list:
         if tool.name in ALLOWED_TOOLS:
+            raw_schema = getattr(tool, "inputSchema", {})
+            schema_dict = copy.deepcopy(raw_schema) if isinstance(raw_schema, dict) else {}
+            # Strip session_id from the model's schema so it cannot see or set session_id
+            props = schema_dict.get("properties", {})
+            if "session_id" in props:
+                props.pop("session_id", None)
+            reqs = schema_dict.get("required", [])
+            if "session_id" in reqs:
+                schema_dict["required"] = [r for r in reqs if r != "session_id"]
+
             tool_config["tools"].append({
                 "toolSpec": {
                     "name": tool.name,
                     "description": getattr(tool, "description", ""),
-                    "inputSchema": {"json": getattr(tool, "inputSchema", {})},
+                    "inputSchema": {"json": schema_dict},
                 }
             })
     return tool_config
@@ -194,6 +216,38 @@ def run_turn(
 
     Gracefully falls back to secondary model or the offline rule engine if AWS is unavailable.
     """
+    token = set_current_session_id(session_id)
+    try:
+        return _run_turn_inner(session_id, utterance, history)
+    finally:
+        reset_current_session_id(token)
+
+
+def _run_turn_inner(
+    session_id: str,
+    utterance: str,
+    history: List[Dict[str, Any]] | None = None,
+) -> Dict[str, Any]:
+    # -------------------------------------------------------------
+    # Tier 0 (Primary Active Backend): Groq LLM Client
+    # -------------------------------------------------------------
+    groq_api_key = os.environ.get("GROQ_API_KEY")
+    if groq_api_key and groq_api_key.strip():
+        groq_model_id = os.environ.get("GROQ_MODEL_ID", "llama-3.1-70b-versatile")
+        try:
+            from aegishome.groq_client import GroqClient
+            groq_client = GroqClient(api_key=groq_api_key.strip(), model_id=groq_model_id)
+            return groq_client.run_turn(
+                session_id=session_id,
+                utterance=utterance,
+                history=history,
+            )
+        except Exception as e:
+            logger.warning(
+                f"Groq primary active model ({groq_model_id}) invocation failed: {e}. "
+                f"Gracefully falling back to Bedrock / rule engine..."
+            )
+
     primary_model_id = os.environ.get("BEDROCK_MODEL_ID")
     fallback_model_id = os.environ.get("BEDROCK_FALLBACK_MODEL_ID")
 
@@ -312,7 +366,13 @@ def run_turn(
                         tool_use = block["toolUse"]
                         tool_name = tool_use["name"]
                         tool_id = tool_use["toolUseId"]
-                        tool_input = tool_use.get("input", {})
+                        tool_input = dict(tool_use.get("input", {}))
+                        if "session_id" in tool_input:
+                            supplied_sid = tool_input.pop("session_id")
+                            logger.warning(
+                                f"Security Alert: Model attempted to supply session_id='{supplied_sid}'. "
+                                f"Stripped and enforcing turn session='{session_id}'."
+                            )
 
                         try:
                             mcp_res = mcp.call_tool(name=tool_name, arguments=tool_input)

@@ -20,6 +20,7 @@ from aegis_guard.confirm import (
 )
 from aegis_guard.taint import get_taint_tracker
 from aegishome.devices import get_simulated_home
+from aegishome.session_context import resolve_active_session
 
 
 # Global gateway and taint tracker
@@ -72,29 +73,46 @@ def propose_action(
     action_type: str,
     target: str,
     parameters: dict[str, Any] | None = None,
-    session_id: str = "",
+    session_id: str | None = None,
 ) -> dict[str, Any]:
     """Propose an action on a smart-home device (e.g. unlock door, change temperature).
 
     Evaluates action risk tier via RiskPolicy. Generates a 4-digit HMAC-SHA256
     voice code for MEDIUM and HIGH tiers. Does NOT mutate device state.
+    Session is bound authoritatively by the server; any caller-supplied session_id
+    is ignored and audited.
 
     Args:
         action_type: Category of action (e.g. 'unlock_door', 'set_temperature', 'open').
         target: Target device or entity identifier (e.g. 'front_door', 'thermostat', 'garage_door').
         parameters: Optional key-value parameters for the action.
-        session_id: Optional MCP session identifier.
+        session_id: Optional caller-supplied session identifier (ignored if ambient context exists).
 
     Returns:
         Proposal record with unique proposal_id, risk_tier, summary, expires_at,
         and voice_code if applicable.
     """
+    active_session, was_spoof = resolve_active_session(session_id)
+    if was_spoof:
+        _GATEWAY.audit_logger.log_block(
+            proposal_id="",
+            device=target,
+            action=action_type,
+            risk_tier="HIGH",
+            session_id=active_session,
+            reason=(
+                f"Security Alert: Caller-supplied session_id '{session_id}' "
+                f"ignored; bound to authoritative session '{active_session}'."
+            ),
+            error_type="SessionSpoofingAttempt",
+        )
+
     params = parameters or {}
     proposal_res = _GATEWAY.propose(
         device=target,
         action=action_type,
         params=params,
-        session_id=session_id,
+        session_id=active_session,
     )
     # Add convenience fields for callers
     proposal_res["action_type"] = action_type
@@ -229,20 +247,36 @@ def confirm_action(
 
 def read_visitor_note(
     note_id: str = "latest",
-    session_id: str = "default_session",
+    session_id: str | None = None,
 ) -> dict[str, Any]:
     """Read a note left by a visitor, courier, or external guest at the front entrance.
 
     Wraps the untrusted content as {content, untrusted: true, source} and marks
-    the active session as tainted, triggering risk escalation for subsequent actions.
+    the authoritative active session as tainted, triggering risk escalation for subsequent actions.
+    Any caller-supplied session_id argument is ignored and audited if ambient context exists.
 
     Args:
         note_id: The ID of the visitor note to retrieve (defaults to 'latest').
-        session_id: The active session identifier to mark tainted upon reading untrusted input.
+        session_id: Optional caller-supplied session identifier (ignored if ambient context exists).
 
     Returns:
         Structured dictionary wrapping the untrusted content with source and taint markers.
     """
+    active_session, was_spoof = resolve_active_session(session_id)
+    if was_spoof:
+        _GATEWAY.audit_logger.log_block(
+            proposal_id="",
+            device="visitor_notes",
+            action="read",
+            risk_tier="LOW",
+            session_id=active_session,
+            reason=(
+                f"Security Alert: Caller-supplied session_id '{session_id}' "
+                f"ignored; bound to authoritative session '{active_session}'."
+            ),
+            error_type="SessionSpoofingAttempt",
+        )
+
     raw_note = _NOTES.get(note_id, {
         "note_id": note_id,
         "author": "Unknown",
@@ -253,7 +287,7 @@ def read_visitor_note(
     wrapped = _TAINT_TRACKER.wrap_untrusted(
         content=raw_note["content"],
         source=f"visitor_note:{note_id}",
-        session_id=session_id,
+        session_id=active_session,
         reason=f"Read external visitor note '{note_id}'",
     )
 

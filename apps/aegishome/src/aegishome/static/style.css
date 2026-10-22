@@ -349,15 +349,25 @@ body {
 }
 
 .engine-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 11px;
   font-weight: 700;
   color: var(--teal-accent);
   background-color: var(--teal-light);
-  padding: 3px 10px;
+  padding: 4px 10px;
   border-radius: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.engine-chip.chip-groq {
+  color: #c2410c;
+  background-color: #ffedd5;
+  border: 1px solid #fdba74;
 }
 
 .engine-chip.chip-bedrock {
@@ -376,6 +386,35 @@ body {
   color: var(--teal-accent);
   background-color: var(--teal-light);
   border: 1px solid rgba(13, 148, 136, 0.25);
+}
+
+/* Adversarial Injected Instruction Bubble (Demo Step 4) */
+.msg-injected {
+  align-items: center;
+  margin: 6px 0;
+}
+
+.msg-bubble-injected {
+  max-width: 86%;
+  background-color: #fff1f2;
+  color: #9f1239;
+  border: 1.5px dashed #f43f5e;
+  border-radius: 12px;
+  padding: 10px 14px;
+  box-shadow: 0 2px 8px rgba(244, 63, 94, 0.12);
+  animation: bubbleRise 200ms ease-out;
+}
+
+.injected-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #e11d48;
+  margin-bottom: 4px;
 }
 
 .session-taint-chip {

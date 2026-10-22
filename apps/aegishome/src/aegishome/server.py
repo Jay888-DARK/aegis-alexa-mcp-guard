@@ -13,8 +13,12 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import LATEST_PROTOCOL_VERSION
 
+from starlette.middleware import Middleware
+from starlette.types import ASGIApp, Scope, Receive, Send
+
 from aegishome.client import get_intent_driver, MCPToolExecutor
 from aegishome.devices import get_simulated_home
+from aegishome.session_context import set_current_session_id, reset_current_session_id
 from aegishome.tools import (
     get_home_status,
     propose_action,
@@ -31,6 +35,27 @@ SERVER_NAME = "aegishome"
 SERVER_VERSION = "0.1.0"
 MINIMUM_SUPPORTED_PROTOCOL_VERSION = "2025-11-25"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+
+class SessionBindingMiddleware:
+    """Extracts Mcp-Session-Id from incoming HTTP transport headers and binds to ContextVar."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http":
+            headers = dict(scope.get("headers", []))
+            mcp_sid = headers.get(b"mcp-session-id")
+            if mcp_sid:
+                session_str = mcp_sid.decode("utf-8", errors="ignore").strip()
+                token = set_current_session_id(session_str)
+                try:
+                    await self.app(scope, receive, send)
+                finally:
+                    reset_current_session_id(token)
+                return
+        await self.app(scope, receive, send)
 
 
 def create_mcp_server() -> MCPServer:
@@ -50,6 +75,17 @@ def create_mcp_server() -> MCPServer:
     server.tool(name="approve_action")(approve_action)
     server.tool(name="confirm_action")(confirm_action)
     server.tool(name="read_visitor_note")(read_visitor_note)
+
+    # Strip session_id from tool schemas exposed to MCP clients
+    for tool_name in ("propose_action", "read_visitor_note"):
+        tool_obj = server._tool_manager.get_tool(tool_name)
+        if tool_obj and hasattr(tool_obj, "parameters") and isinstance(tool_obj.parameters, dict):
+            props = tool_obj.parameters.get("properties", {})
+            if "session_id" in props:
+                del props["session_id"]
+            req = tool_obj.parameters.get("required", [])
+            if "session_id" in req:
+                tool_obj.parameters["required"] = [r for r in req if r != "session_id"]
 
     return server
 
@@ -89,7 +125,11 @@ async def api_say(request: Request) -> JSONResponse:
     history = body.get("history", [])
 
     driver = get_intent_driver()
-    response = driver.process_utterance(utterance, session_id=session_id, history=history)
+    token = set_current_session_id(session_id)
+    try:
+        response = driver.process_utterance(utterance, session_id=session_id, history=history)
+    finally:
+        reset_current_session_id(token)
 
     return JSONResponse(
         {
@@ -134,6 +174,31 @@ async def api_state(request: Request) -> JSONResponse:
             }
         )
 
+    engine = "RULE ENGINE"
+    engine_badge = "RULE ENGINE"
+    badge_tooltip = "Deterministic safety gateway active"
+    groq_api_key = os.environ.get("GROQ_API_KEY")
+    if groq_api_key and groq_api_key.strip():
+        model_id = os.environ.get("GROQ_MODEL_ID", "llama-3.1-70b-versatile")
+        try:
+            from aegishome.groq_client import get_groq_short_model_name
+            engine = "GROQ"
+            engine_badge = f"GROQ · {get_groq_short_model_name(model_id)}"
+            badge_tooltip = f"Active Groq LLM: {model_id}"
+        except Exception:
+            engine = "GROQ"
+            engine_badge = "GROQ"
+            badge_tooltip = f"Active Groq LLM: {model_id}"
+    elif os.environ.get("BEDROCK_MODEL_ID"):
+        try:
+            from apps.aegishome.agent import _get_short_model_name
+            mid = os.environ.get("BEDROCK_MODEL_ID", "")
+            engine = "BEDROCK"
+            engine_badge = f"BEDROCK · {_get_short_model_name(mid)}"
+            badge_tooltip = f"Active AWS Bedrock: {mid}"
+        except Exception:
+            pass
+
     return JSONResponse(
         {
             "devices": get_home_status(),
@@ -141,6 +206,9 @@ async def api_state(request: Request) -> JSONResponse:
             "wire_logs": wire_logger.get_entries(limit=50),
             "audit_logs": audit_logger.read_entries()[-50:],
             "is_tainted": taint_tracker.is_tainted(session_id),
+            "engine": engine,
+            "engine_badge": engine_badge,
+            "badge_tooltip": badge_tooltip,
         }
     )
 
@@ -260,4 +328,8 @@ def create_app(
         Mount("", app=mcp_app),
     ]
 
-    return Starlette(routes=routes, lifespan=app_lifespan)
+    return Starlette(
+        routes=routes,
+        lifespan=app_lifespan,
+        middleware=[Middleware(SessionBindingMiddleware)],
+    )
