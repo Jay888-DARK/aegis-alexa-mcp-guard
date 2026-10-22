@@ -15,6 +15,7 @@ const state = {
   sessionId: 'meera_session_' + Math.random().toString(36).substring(2, 8),
   pollingInterval: null,
   activeProposal: null,
+  dismissedProposalIds: new Set(),
   isStoryPlaying: false,
   storyAbortController: null,
 };
@@ -168,13 +169,19 @@ function updateSessionTaint(isTainted) {
   }
 }
 
+function clearPhoneApprovalCard() {
+  state.activeProposal = null;
+  if (phoneApprovalCard) phoneApprovalCard.style.display = 'none';
+  if (phoneEmptyState) phoneEmptyState.style.display = 'flex';
+}
+
 function updateProposalsAndPhone(proposals, isSessionTainted) {
-  const pending = proposals.filter((p) => p.status === 'PENDING');
+  const pending = proposals.filter(
+    (p) => p.status === 'PENDING' && !p.owner_approved && (!state.dismissedProposalIds || !state.dismissedProposalIds.has(p.proposal_id))
+  );
   
   if (pending.length === 0) {
-    state.activeProposal = null;
-    phoneApprovalCard.style.display = 'none';
-    phoneEmptyState.style.display = 'flex';
+    clearPhoneApprovalCard();
     return;
   }
 
@@ -514,6 +521,12 @@ function handleSamplePrompt() {
 async function handleManualPhoneApprove() {
   if (!state.activeProposal) return;
   const propId = state.activeProposal.proposal_id;
+  if (state.dismissedProposalIds) {
+    state.dismissedProposalIds.add(propId);
+  }
+
+  // Immediately clear the active proposal card from the phone UI DOM and restore default "No approvals waiting" view
+  clearPhoneApprovalCard();
 
   try {
     await fetch('/api/approve', {
@@ -535,6 +548,12 @@ async function handleManualPhoneApprove() {
 async function handleManualPhoneDeny() {
   if (!state.activeProposal) return;
   const propId = state.activeProposal.proposal_id;
+  if (state.dismissedProposalIds) {
+    state.dismissedProposalIds.add(propId);
+  }
+
+  // Immediately clear the active proposal card from the phone UI DOM and restore default "No approvals waiting" view
+  clearPhoneApprovalCard();
 
   try {
     await fetch('/api/confirm', {
@@ -727,6 +746,11 @@ async function runCaregiverStory() {
 
     if (state.activeProposal) {
       const propId = state.activeProposal.proposal_id;
+      if (state.dismissedProposalIds) {
+        state.dismissedProposalIds.add(propId);
+      }
+      clearPhoneApprovalCard();
+
       await fetch('/api/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -736,6 +760,8 @@ async function runCaregiverStory() {
           reason: "Blocked: request came from untrusted visitor note",
         }),
       });
+    } else {
+      clearPhoneApprovalCard();
     }
 
     await sleep(300);
@@ -773,9 +799,10 @@ async function handleResetDemo() {
       </div>`;
 
     // Reset phone view
-    phoneApprovalCard.style.display = 'none';
-    phoneEmptyState.style.display = 'flex';
-    state.activeProposal = null;
+    if (state.dismissedProposalIds) {
+      state.dismissedProposalIds.clear();
+    }
+    clearPhoneApprovalCard();
 
     // Refresh state
     await pollState();

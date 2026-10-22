@@ -17,14 +17,16 @@ except Exception:
 try:
     from mcp.types import CallToolResult, InitializeResult
 
-    if not hasattr(CallToolResult, "is_error"):
-        CallToolResult.is_error = property(lambda self: getattr(self, "isError", False))
-    if not hasattr(CallToolResult, "structured_content"):
-        CallToolResult.structured_content = property(lambda self: getattr(self, "structuredContent", None))
-    if not hasattr(InitializeResult, "protocol_version"):
-        InitializeResult.protocol_version = property(lambda self: getattr(self, "protocolVersion", None))
-    if not hasattr(InitializeResult, "server_info"):
-        InitializeResult.server_info = property(lambda self: getattr(self, "serverInfo", None))
+    # Support camelCase properties if snake_case fields exist in Pydantic models
+    if hasattr(InitializeResult, "model_fields"):
+        if not hasattr(InitializeResult, "protocolVersion"):
+            InitializeResult.protocolVersion = property(lambda self: getattr(self, "protocol_version", None))
+        if not hasattr(InitializeResult, "serverInfo"):
+            InitializeResult.serverInfo = property(lambda self: getattr(self, "server_info", None))
+        if not hasattr(CallToolResult, "isError"):
+            CallToolResult.isError = property(lambda self: getattr(self, "is_error", False))
+        if not hasattr(CallToolResult, "structuredContent"):
+            CallToolResult.structuredContent = property(lambda self: getattr(self, "structured_content", None))
 except Exception:
     pass
 

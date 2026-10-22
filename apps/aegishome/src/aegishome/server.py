@@ -1,8 +1,16 @@
 """AegisHome MCP Server with Streamable HTTP transport, Starlette integration, and Web App."""
 
+from pathlib import Path
+from dotenv import load_dotenv, find_dotenv
+
+# Ensure .env is loaded at the very top of server.py before importing server or agent components
+load_dotenv(find_dotenv(usecwd=True))
+_repo_root = Path(__file__).resolve().parents[4]
+if (_repo_root / ".env").exists():
+    load_dotenv(_repo_root / ".env")
+
 import contextlib
 import os
-from pathlib import Path
 from typing import Any, AsyncIterator
 from starlette.applications import Starlette
 from starlette.requests import Request

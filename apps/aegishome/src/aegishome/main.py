@@ -1,13 +1,17 @@
-"""Main entrypoint to run the AegisHome MCP server via Uvicorn."""
+from pathlib import Path
+from dotenv import load_dotenv, find_dotenv
+
+# Load .env at the very top before any server or agent components are imported
+load_dotenv(find_dotenv(usecwd=True))
+_repo_root = Path(__file__).resolve().parents[4]
+if (_repo_root / ".env").exists():
+    load_dotenv(_repo_root / ".env")
 
 import argparse
 import os
 import uvicorn
-from dotenv import load_dotenv
 
 from aegishome.server import create_app
-
-load_dotenv()
 
 
 def parse_args() -> argparse.Namespace:
